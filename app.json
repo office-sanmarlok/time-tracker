@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Time Tracker",
+    "slug": "time-tracker",
+    "version": "1.0.0",
+    "entryPoint": "./index.ts",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.timetracker.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch"]
+      }
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"]
+  }
+}
