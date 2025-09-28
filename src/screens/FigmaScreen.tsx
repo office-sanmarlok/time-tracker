@@ -12,7 +12,8 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import { FigmaChart } from '@/components/FigmaChart';
+import { FunctionalFigmaChart } from '@/components/FunctionalFigmaChart';
+import { TimeDisplay } from '@/components/TimeDisplay';
 import { useTimeTrackerStore } from '@/store/useTimeTrackerStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -20,7 +21,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export const FigmaScreen: React.FC = () => {
   const currentActivity = useTimeTrackerStore(state => state.currentActivity);
   const switchActivity = useTimeTrackerStore(state => state.switchActivity);
-  const stopTracking = useTimeTrackerStore(state => state.stopTracking);
+  const stopCurrentActivity = useTimeTrackerStore(state => state.stopCurrentActivity);
 
   // Get buttons from store and ensure Figma activities exist
   const buttons = useTimeTrackerStore(state => state.buttons);
@@ -55,7 +56,7 @@ export const FigmaScreen: React.FC = () => {
 
   const handleToggle = (activityId: string) => {
     if (currentActivity?.buttonId === activityId) {
-      stopTracking();
+      stopCurrentActivity();
     } else {
       switchActivity(activityId);
     }
@@ -88,8 +89,11 @@ export const FigmaScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Pie Chart - Exact Figma Replica */}
-      <FigmaChart />
+      {/* Functional Pie Chart with Figma Style */}
+      <FunctionalFigmaChart />
+
+      {/* Time Display */}
+      <TimeDisplay />
 
       {/* Toggle Grid */}
       <View style={styles.toggleSection}>
