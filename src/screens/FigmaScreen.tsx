@@ -12,7 +12,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import { FunctionalFigmaChart } from '@/components/FunctionalFigmaChart';
+import { ClockChart } from '@/components/ClockChart';
 import { TimeDisplay } from '@/components/TimeDisplay';
 import { useTimeTrackerStore } from '@/store/useTimeTrackerStore';
 
@@ -89,8 +89,8 @@ export const FigmaScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Functional Pie Chart with Figma Style */}
-      <FunctionalFigmaChart />
+      {/* 24-Hour Clock Chart */}
+      <ClockChart />
 
       {/* Time Display */}
       <TimeDisplay />
