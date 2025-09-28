@@ -1,4 +1,4 @@
-# Feature Spec Creation Workflow
+# Spec Driven Development (SDD) Workflow
 
 ## Overview
 
@@ -140,21 +140,21 @@ Convert the feature design into a series of prompts for a code-generation LLM th
 - Tasks should focus on implementation details rather than high-level concepts
 - Tasks should be scoped to specific coding activities (e.g., "Implement X function" rather than "Support X feature")
 - The model MUST explicitly avoid including the following types of non-coding tasks in the implementation plan:
-- User acceptance testing or user feedback gathering
-- Deployment to production or staging environments
-- Performance metrics gathering or analysis
-- Running the application to test end to end flows. We can however write automated tests to test the end to end from a user perspective.
-- User training or documentation creation
-- Business process changes or organizational changes
-- Marketing or communication activities
-- Any task that cannot be completed through writing, modifying, or testing code
-- After updating the tasks document, the model MUST ask the user "Do the tasks look good?" using the 'userInput' tool.
-- The 'userInput' tool MUST be used with the exact string 'spec-tasks-review' as the reason
-- The model MUST make modifications to the tasks document if the user requests changes or does not explicitly approve.
-- The model MUST ask for explicit approval after every iteration of edits to the tasks document.
-- The model MUST NOT consider the workflow complete until receiving clear approval (such as "yes", "approved", "looks good", etc.).
-- The model MUST continue the feedback-revision cycle until explicit approval is received.
-- The model MUST stop once the task document has been approved.
+  - User acceptance testing or user feedback gathering
+  - Deployment to production or staging environments
+  - Performance metrics gathering or analysis
+  - Running the application to test end to end flows. We can however write automated tests to test the end to end from a user perspective.
+  - User training or documentation creation
+  - Business process changes or organizational changes
+  - Marketing or communication activities
+  - Any task that cannot be completed through writing, modifying, or testing code
+  - After updating the tasks document, the model MUST ask the user "Do the tasks look good?" using the 'userInput' tool.
+  - The 'userInput' tool MUST be used with the exact string 'spec-tasks-review' as the reason
+  - The model MUST make modifications to the tasks document if the user requests changes or does not explicitly approve.
+  - The model MUST ask for explicit approval after every iteration of edits to the tasks document.
+  - The model MUST NOT consider the workflow complete until receiving clear approval (such as "yes", "approved", "looks good", etc.).
+  - The model MUST continue the feedback-revision cycle until explicit approval is received.
+  - The model MUST stop once the task document has been approved.
 
 **This workflow is ONLY for creating design and planning artifacts. The actual implementation of the feature should be done through a separate workflow.**
 

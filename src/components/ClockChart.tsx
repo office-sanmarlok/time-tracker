@@ -134,26 +134,42 @@ export const ClockChart: React.FC = () => {
     if (currentActivity) {
       const activityStart = new Date(currentActivity.startTime);
 
-      // Add gray gap if needed
-      if (activityStart > lastEndTime) {
-        segments.push({
-          startTime: lastEndTime,
-          endTime: activityStart,
-          buttonId: 'inactive',
-          color: '#E5E5E5'
-        });
+      // In dev mode, ensure activity start is within current cycle
+      let effectiveStart = activityStart;
+      if (DEV_MODE) {
+        // If activity started before current cycle, use cycle start
+        if (activityStart < cycleStart) {
+          effectiveStart = cycleStart;
+        }
+        // If activity started after current time (shouldn't happen), use current time
+        if (activityStart > currentTime) {
+          effectiveStart = currentTime;
+        }
       }
 
-      // Add current activity up to current time
-      const button = buttons.find(b => b.id === currentActivity.buttonId);
-      segments.push({
-        startTime: activityStart,
-        endTime: currentTime,
-        buttonId: currentActivity.buttonId,
-        color: figmaColors[currentActivity.buttonId] || button?.color || '#888'
-      });
+      // Only add segment if it's within our time window
+      if (effectiveStart >= cycleStart && effectiveStart <= currentTime) {
+        // Add gray gap if needed
+        if (effectiveStart > lastEndTime) {
+          segments.push({
+            startTime: lastEndTime,
+            endTime: effectiveStart,
+            buttonId: 'inactive',
+            color: '#E5E5E5'
+          });
+        }
 
-      lastEndTime = currentTime;
+        // Add current activity up to current time
+        const button = buttons.find(b => b.id === currentActivity.buttonId);
+        segments.push({
+          startTime: effectiveStart,
+          endTime: currentTime,
+          buttonId: currentActivity.buttonId,
+          color: figmaColors[currentActivity.buttonId] || button?.color || '#888'
+        });
+
+        lastEndTime = currentTime;
+      }
     }
 
     // Add gray for remaining time until current moment
@@ -196,6 +212,24 @@ export const ClockChart: React.FC = () => {
     const startAngle = timeToAngle(segment.startTime);
     const endAngle = timeToAngle(segment.endTime);
 
+    // Ensure angles are valid
+    if (isNaN(startAngle) || isNaN(endAngle)) {
+      return ''; // Return empty path if angles are invalid
+    }
+
+    // Calculate angle difference properly
+    let angleDiff = endAngle - startAngle;
+
+    // Handle wrap-around
+    if (angleDiff < 0) {
+      angleDiff += 360;
+    }
+
+    // Prevent full circle or negative segments
+    if (angleDiff <= 0 || angleDiff >= 360) {
+      return ''; // Return empty path for invalid segments
+    }
+
     const startAngleRad = (startAngle * Math.PI) / 180;
     const endAngleRad = (endAngle * Math.PI) / 180;
 
@@ -211,9 +245,6 @@ export const ClockChart: React.FC = () => {
     const x4 = centerX + innerRadius * Math.cos(endAngleRad);
     const y4 = centerY + innerRadius * Math.sin(endAngleRad);
 
-    // Check if arc spans more than 180 degrees
-    let angleDiff = endAngle - startAngle;
-    if (angleDiff < 0) angleDiff += 360;
     const largeArc = angleDiff > 180 ? 1 : 0;
 
     return `
