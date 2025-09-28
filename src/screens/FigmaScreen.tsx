@@ -12,7 +12,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { FigmaChart } from '@/components/FigmaChart';
 import { useTimeTrackerStore } from '@/store/useTimeTrackerStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -61,56 +61,6 @@ export const FigmaScreen: React.FC = () => {
     }
   };
 
-  // Chart configuration
-  const chartSize = 288;
-  const centerX = chartSize / 2;
-  const centerY = chartSize / 2;
-  const outerRadius = 144;
-  const innerRadius = 100;
-
-  // Calculate segments
-  const total = 24 * 60; // Total minutes in a day
-  const segments = [
-    { color: '#CDDC39', value: 25, label: 'Eating' },
-    { color: '#00BCD4', value: 25, label: 'Cycling' },
-    { color: '#FF5722', value: 25, label: 'Studying' },
-    { color: '#9E9E9E', value: 25, label: 'Sleeping' },
-  ];
-
-  let currentAngle = -90; // Start from top
-
-  const createArc = (segment: any) => {
-    const angle = (segment.value / 100) * 360;
-    const startAngleRad = (currentAngle * Math.PI) / 180;
-    const endAngleRad = ((currentAngle + angle) * Math.PI) / 180;
-
-    const x1 = centerX + outerRadius * Math.cos(startAngleRad);
-    const y1 = centerY + outerRadius * Math.sin(startAngleRad);
-    const x2 = centerX + outerRadius * Math.cos(endAngleRad);
-    const y2 = centerY + outerRadius * Math.sin(endAngleRad);
-
-    const x3 = centerX + innerRadius * Math.cos(startAngleRad);
-    const y3 = centerY + innerRadius * Math.sin(startAngleRad);
-    const x4 = centerX + innerRadius * Math.cos(endAngleRad);
-    const y4 = centerY + innerRadius * Math.sin(endAngleRad);
-
-    const largeArc = angle > 180 ? 1 : 0;
-
-    const path = `
-      M ${x3} ${y3}
-      L ${x1} ${y1}
-      A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2}
-      L ${x4} ${y4}
-      A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x3} ${y3}
-      Z
-    `;
-
-    const result = { path, color: segment.color };
-    currentAngle += angle;
-    return result;
-  };
-
-  const arcs = segments.map(createArc);
 
   const ToggleSwitch = ({ activity, isActive }: { activity: any; isActive: boolean }) => (
     <TouchableOpacity
@@ -138,37 +88,8 @@ export const FigmaScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Pie Chart */}
-      <View style={styles.chartSection}>
-        <View style={styles.chartWrapper}>
-          <Svg width={chartSize} height={chartSize}>
-            {/* Shadow circle */}
-            <Circle
-              cx={centerX + 2}
-              cy={centerY + 2}
-              r={outerRadius}
-              fill="rgba(0,0,0,0.05)"
-            />
-
-            {/* Background circle */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={outerRadius}
-              fill="#F5F5F5"
-            />
-
-            {/* Segments */}
-            {arcs.map((arc, index) => (
-              <Path
-                key={index}
-                d={arc.path}
-                fill={arc.color}
-              />
-            ))}
-          </Svg>
-        </View>
-      </View>
+      {/* Pie Chart - Exact Figma Replica */}
+      <FigmaChart />
 
       {/* Toggle Grid */}
       <View style={styles.toggleSection}>
@@ -212,15 +133,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  chartSection: {
-    height: 413,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chartWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   toggleSection: {
     paddingHorizontal: 34,
