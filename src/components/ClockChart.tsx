@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import Svg, { Path, G, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useTimeTrackerStore } from '@/store/useTimeTrackerStore';
 
@@ -16,39 +16,75 @@ interface TimeSegment {
   color: string;
 }
 
+// Development mode: Set to true for 5-minute cycle, false for 24-hour cycle
+const DEV_MODE = true;
+const CYCLE_DURATION = DEV_MODE ? 5 * 60 : 24 * 60 * 60; // 5 minutes or 24 hours in seconds
+
 export const ClockChart: React.FC = () => {
   const activities = useTimeTrackerStore(state => state.activities);
   const currentActivity = useTimeTrackerStore(state => state.currentActivity);
   const buttons = useTimeTrackerStore(state => state.buttons);
 
-  // Update every minute for smooth rotation
+  // Update more frequently in dev mode
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
+    const updateInterval = DEV_MODE ? 1000 : 10000; // 1 second in dev, 10 seconds in prod
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 10000); // Update every 10 seconds for smoother movement
+    }, updateInterval);
 
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate the current time angle (0° = midnight at top)
+  // Calculate the current time angle (0° = midnight/cycle start at top)
   const currentTimeAngle = useMemo(() => {
     const now = currentTime;
-    const midnight = new Date(now);
-    midnight.setHours(0, 0, 0, 0);
 
-    const secondsSinceMidnight = (now.getTime() - midnight.getTime()) / 1000;
-    const secondsInDay = 24 * 60 * 60;
+    if (DEV_MODE) {
+      // In dev mode: 5 minutes = full rotation
+      const cycleStart = new Date(now);
+      const minutes = cycleStart.getMinutes();
+      const seconds = cycleStart.getSeconds();
 
-    // Convert to degrees (360° = full day)
-    return (secondsSinceMidnight / secondsInDay) * 360;
+      // Calculate position within current 5-minute cycle
+      const secondsIntoCycle = (minutes % 5) * 60 + seconds;
+      return (secondsIntoCycle / 300) * 360; // 300 seconds = 5 minutes
+    } else {
+      // Production mode: 24 hours = full rotation
+      const midnight = new Date(now);
+      midnight.setHours(0, 0, 0, 0);
+
+      const secondsSinceMidnight = (now.getTime() - midnight.getTime()) / 1000;
+      const secondsInDay = 24 * 60 * 60;
+
+      return (secondsSinceMidnight / secondsInDay) * 360;
+    }
   }, [currentTime]);
 
-  // Build chronological segments for the day
+  // Build chronological segments for the cycle
   const segments = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayActivities = activities.filter(a => a.date === today);
+    let relevantActivities: typeof activities = [];
+    let cycleStart: Date;
+
+    if (DEV_MODE) {
+      // In dev mode: Only show activities from current 5-minute cycle
+      cycleStart = new Date(currentTime);
+      const minutes = Math.floor(cycleStart.getMinutes() / 5) * 5;
+      cycleStart.setMinutes(minutes, 0, 0);
+
+      // Filter activities within current 5-minute window
+      relevantActivities = activities.filter(a => {
+        const activityTime = new Date(a.startTime);
+        return activityTime >= cycleStart && activityTime < currentTime;
+      });
+    } else {
+      // Production mode: Show today's activities
+      const today = new Date().toISOString().split('T')[0];
+      relevantActivities = activities.filter(a => a.date === today);
+      cycleStart = new Date();
+      cycleStart.setHours(0, 0, 0, 0);
+    }
 
     // Figma colors
     const figmaColors: { [key: string]: string } = {
@@ -59,15 +95,13 @@ export const ClockChart: React.FC = () => {
     };
 
     const segments: TimeSegment[] = [];
-    const dayStart = new Date();
-    dayStart.setHours(0, 0, 0, 0);
 
     // Sort activities by start time
-    const sortedActivities = [...todayActivities].sort((a, b) =>
+    const sortedActivities = [...relevantActivities].sort((a, b) =>
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
 
-    let lastEndTime = dayStart;
+    let lastEndTime = cycleStart;
 
     // Process each activity
     sortedActivities.forEach(activity => {
@@ -135,15 +169,26 @@ export const ClockChart: React.FC = () => {
     return segments;
   }, [activities, currentActivity, currentTime, buttons]);
 
-  // Convert time to angle (0° = midnight at top, clockwise)
+  // Convert time to angle (0° = midnight/cycle start at top, clockwise)
   const timeToAngle = (time: Date) => {
-    const midnight = new Date(time);
-    midnight.setHours(0, 0, 0, 0);
+    if (DEV_MODE) {
+      // Dev mode: Map time to 5-minute cycles
+      const minutes = time.getMinutes();
+      const seconds = time.getSeconds();
 
-    const secondsSinceMidnight = (time.getTime() - midnight.getTime()) / 1000;
-    const secondsInDay = 24 * 60 * 60;
+      // Calculate position within current 5-minute cycle
+      const secondsIntoCycle = (minutes % 5) * 60 + seconds;
+      return (secondsIntoCycle / 300) * 360 - 90; // -90 to start from top
+    } else {
+      // Production mode: Map to 24-hour day
+      const midnight = new Date(time);
+      midnight.setHours(0, 0, 0, 0);
 
-    return (secondsSinceMidnight / secondsInDay) * 360 - 90; // -90 to start from top
+      const secondsSinceMidnight = (time.getTime() - midnight.getTime()) / 1000;
+      const secondsInDay = 24 * 60 * 60;
+
+      return (secondsSinceMidnight / secondsInDay) * 360 - 90; // -90 to start from top
+    }
   };
 
   // Create path for a segment
@@ -263,6 +308,14 @@ export const ClockChart: React.FC = () => {
             <Circle cx={centerX} cy={centerY} r={3} fill="#FF0000" />
           </G>
         </Svg>
+
+        {/* Dev mode indicator */}
+        {DEV_MODE && (
+          <View style={styles.devIndicator}>
+            <Text style={styles.devText}>DEV MODE</Text>
+            <Text style={styles.devSubtext}>5 min cycle</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -292,5 +345,22 @@ const styles = StyleSheet.create({
   chart: {
     position: 'absolute',
     transform: [{ rotate: '5deg' }], // Maintain Figma's rotation
+  },
+  devIndicator: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#FF5722',
+    padding: 6,
+    borderRadius: 4,
+  },
+  devText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  devSubtext: {
+    color: 'white',
+    fontSize: 8,
   },
 });
