@@ -13,27 +13,43 @@ import { ACTIVITY_COLORS } from './colors';
  */
 export const DEFAULT_ACTIVITY_BUTTONS: Omit<ActivityButton, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
-    name: 'Sleep',
-    color: ACTIVITY_COLORS.sleep,
+    name: 'Sleeping',
+    color: ACTIVITY_COLORS.sleeping,
     icon: '😴',
     isDefault: true,
     position: 0,
-    isVisible: false  // Initially not shown, user adds as needed
+    isVisible: true
+  },
+  {
+    name: 'Studying',
+    color: ACTIVITY_COLORS.studying,
+    icon: '📚',
+    isDefault: true,
+    position: 1,
+    isVisible: true
+  },
+  {
+    name: 'Cycling',
+    color: ACTIVITY_COLORS.cycling,
+    icon: '🚴',
+    isDefault: true,
+    position: 2,
+    isVisible: true
+  },
+  {
+    name: 'Eating',
+    color: ACTIVITY_COLORS.eating,
+    icon: '🍽️',
+    isDefault: true,
+    position: 3,
+    isVisible: true
   },
   {
     name: 'Work',
     color: ACTIVITY_COLORS.work,
     icon: '💼',
     isDefault: true,
-    position: 1,
-    isVisible: false
-  },
-  {
-    name: 'Meal',
-    color: ACTIVITY_COLORS.meal,
-    icon: '🍽️',
-    isDefault: true,
-    position: 2,
+    position: 4,
     isVisible: false
   },
   {
@@ -41,39 +57,31 @@ export const DEFAULT_ACTIVITY_BUTTONS: Omit<ActivityButton, 'id' | 'createdAt' |
     color: ACTIVITY_COLORS.exercise,
     icon: '🏃',
     isDefault: true,
-    position: 3,
-    isVisible: false
-  },
-  {
-    name: 'Commute',
-    color: ACTIVITY_COLORS.commute,
-    icon: '🚗',
-    isDefault: true,
-    position: 4,
-    isVisible: false
-  },
-  {
-    name: 'Study',
-    color: ACTIVITY_COLORS.study,
-    icon: '📚',
-    isDefault: true,
     position: 5,
     isVisible: false
   },
   {
-    name: 'Break',
-    color: ACTIVITY_COLORS.break,
+    name: 'Rest',
+    color: ACTIVITY_COLORS.rest,
     icon: '☕',
     isDefault: true,
     position: 6,
     isVisible: false
   },
   {
-    name: 'Entertainment',
-    color: ACTIVITY_COLORS.entertainment,
+    name: 'Hobby',
+    color: ACTIVITY_COLORS.hobby,
     icon: '🎮',
     isDefault: true,
     position: 7,
+    isVisible: false
+  },
+  {
+    name: 'Other',
+    color: ACTIVITY_COLORS.other,
+    icon: '📌',
+    isDefault: true,
+    position: 8,
     isVisible: false
   }
 ];
@@ -82,7 +90,7 @@ export const DEFAULT_ACTIVITY_BUTTONS: Omit<ActivityButton, 'id' | 'createdAt' |
  * Initial starter buttons shown on first launch
  * These are automatically visible in the grid
  */
-export const STARTER_BUTTONS = ['Work', 'Break', 'Meal'];
+export const STARTER_BUTTONS = ['Sleeping', 'Studying', 'Cycling', 'Eating'];
 
 /**
  * Get default button by name

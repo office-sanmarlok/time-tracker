@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PieChart } from './PieChart';
-import { ActivityGrid } from './ActivityGrid';
+import { ActivityToggleList } from './ActivityToggleList';
 import { AvailableActivities } from './AvailableActivities';
 import { FloatingAddButton } from './FloatingAddButton';
 import { AddActivityModal } from './modals/AddActivityModal';
@@ -26,7 +26,7 @@ import { UI_COLORS } from '@/constants/colors';
 import { ActivityButton } from '@/types/models';
 
 const { height: screenHeight } = Dimensions.get('window');
-const CHART_HEIGHT = Math.min(screenHeight * 0.25, 200);
+const CHART_HEIGHT = Math.min(screenHeight * 0.35, 300);
 
 export const HomeScreen: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -81,12 +81,9 @@ export const HomeScreen: React.FC = () => {
           />
         </View>
 
-        {/* Activity Buttons Grid */}
-        <View style={styles.gridSection}>
-          <ActivityGrid
-            onButtonLongPress={handleButtonLongPress}
-            isEditMode={isEditMode}
-          />
+        {/* Activity Toggle List */}
+        <View style={styles.toggleSection}>
+          <ActivityToggleList />
         </View>
 
         {/* Available Activities Section */}
@@ -146,15 +143,14 @@ const styles = StyleSheet.create({
   },
   chartSection: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: UI_COLORS.surface,
-    marginBottom: 8,
-    minHeight: CHART_HEIGHT + 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    backgroundColor: UI_COLORS.background,
+    minHeight: CHART_HEIGHT + 40,
   },
-  gridSection: {
+  toggleSection: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    minHeight: 200,
   },
   availableSection: {
     paddingHorizontal: 16,

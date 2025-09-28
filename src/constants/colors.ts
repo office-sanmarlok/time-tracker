@@ -4,16 +4,17 @@
  * @purpose Define all colors used throughout the application for consistent theming
  */
 
-// Default activity colors based on the spec
+// Default activity colors based on Figma design
 export const ACTIVITY_COLORS = {
-  sleep: '#2C3E50',      // Deep blue
-  work: '#8E44AD',       // Purple
-  meal: '#E67E22',       // Orange
-  exercise: '#27AE60',   // Green
-  commute: '#7F8C8D',    // Gray
-  study: '#16A085',      // Teal
-  break: '#8B4513',      // Brown
-  entertainment: '#E91E63' // Pink
+  sleeping: '#9E9E9E',   // Gray
+  studying: '#FF5722',   // Orange
+  cycling: '#00BCD4',    // Cyan
+  eating: '#CDDC39',     // Lime
+  work: '#8E44AD',       // Purple (keeping for existing data)
+  exercise: '#27AE60',   // Green (keeping for existing data)
+  rest: '#2196F3',       // Blue
+  hobby: '#FFC107',      // Amber
+  other: '#795548'       // Brown
 } as const;
 
 // UI colors for components and states

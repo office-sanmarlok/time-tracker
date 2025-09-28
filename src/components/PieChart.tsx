@@ -137,7 +137,7 @@ const PieChartComponent: React.FC<PieChartProps> = ({
         key={`segment-${index}`}
         d={pathData}
         fill={segment.color}
-        fillOpacity={0.9}
+        fillOpacity={1}
         onPress={handleSegmentPress}
       />
     );
