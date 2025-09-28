@@ -25,14 +25,14 @@ export const ClockChart: React.FC = () => {
   const currentActivity = useTimeTrackerStore(state => state.currentActivity);
   const buttons = useTimeTrackerStore(state => state.buttons);
 
-  // Update more frequently in dev mode
+  // Update continuously for smooth animation
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const updateInterval = DEV_MODE ? 1000 : 10000; // 1 second in dev, 10 seconds in prod
+    // Update every 100ms for smooth continuous motion
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, updateInterval);
+    }, 100);
 
     return () => clearInterval(timer);
   }, []);
@@ -67,15 +67,14 @@ export const ClockChart: React.FC = () => {
     let cycleStart: Date;
 
     if (DEV_MODE) {
-      // In dev mode: Only show activities from current 1-minute cycle
+      // In dev mode: Only show activities from current 1-minute interval
       cycleStart = new Date(currentTime);
       cycleStart.setSeconds(0, 0); // Start of current minute
 
-      // Filter activities within current 1-minute window
-      relevantActivities = activities.filter(a => {
-        const activityTime = new Date(a.startTime);
-        return activityTime >= cycleStart && activityTime <= currentTime;
-      });
+      // Filter activities for current minute interval
+      // The date field now contains YYYY-MM-DD HH:mm format in dev mode
+      const currentInterval = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, '0')}-${String(currentTime.getDate()).padStart(2, '0')} ${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+      relevantActivities = activities.filter(a => a.date === currentInterval);
     } else {
       // Production mode: Show today's activities
       const today = new Date().toISOString().split('T')[0];
@@ -118,11 +117,15 @@ export const ClockChart: React.FC = () => {
 
       // Add activity segment
       const button = buttons.find(b => b.id === activity.buttonId);
+      const color = activity.buttonId === 'blank' 
+        ? '#E5E5E5'  // Gray for blank/inactive time
+        : (figmaColors[activity.buttonId] || button?.color || '#888');
+      
       segments.push({
         startTime: activityStart,
         endTime: activityEnd,
         buttonId: activity.buttonId,
-        color: figmaColors[activity.buttonId] || button?.color || '#888'
+        color
       });
 
       lastEndTime = activityEnd;
@@ -147,35 +150,41 @@ export const ClockChart: React.FC = () => {
 
       // Only add segment if it's within our time window
       if (effectiveStart >= cycleStart && effectiveStart <= currentTime) {
-        // Add gray gap if needed
+        // With blank activity tracking, gaps should not exist
+        // But keep this for backward compatibility
         if (effectiveStart > lastEndTime) {
           segments.push({
             startTime: lastEndTime,
             endTime: effectiveStart,
-            buttonId: 'inactive',
+            buttonId: 'blank',
             color: '#E5E5E5'
           });
         }
 
-        // Add current activity up to current time
+        // Add current activity up to current time (continuously updating)
         const button = buttons.find(b => b.id === currentActivity.buttonId);
+        const color = currentActivity.buttonId === 'blank'
+          ? '#E5E5E5'  // Gray for blank/inactive time
+          : (figmaColors[currentActivity.buttonId] || button?.color || '#888');
+        
         segments.push({
           startTime: effectiveStart,
-          endTime: currentTime,
+          endTime: currentTime, // This continuously updates every 100ms
           buttonId: currentActivity.buttonId,
-          color: figmaColors[currentActivity.buttonId] || button?.color || '#888'
+          color
         });
 
         lastEndTime = currentTime;
       }
     }
 
-    // Add gray for remaining time until current moment
+    // With blank activity tracking, this should not happen
+    // But keep for edge cases
     if (lastEndTime < currentTime) {
       segments.push({
         startTime: lastEndTime,
         endTime: currentTime,
-        buttonId: 'inactive',
+        buttonId: 'blank',
         color: '#E5E5E5'
       });
     }
@@ -357,6 +366,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 320,
+    marginTop: 40,  // Added spacing to avoid iPhone notch/bezel
   },
   chartWrapper: {
     width: 288,

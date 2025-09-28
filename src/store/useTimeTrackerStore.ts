@@ -21,7 +21,9 @@ import {
 import {
   getTodayKey,
   calculateDuration,
-  splitActivityAtMidnight
+  splitActivityAtMidnight,
+  formatDateKey,
+  getDayBounds
 } from '@/utils/dateUtils';
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/constants/haptics';
 import { getStarterButtons } from '@/constants/defaultButtons';
@@ -98,29 +100,80 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
       const button = state.buttons.find(b => b.id === buttonId);
 
       if (!button) {
-        console.error('Button not found:', buttonId);
+        console.error(`Button with id ${buttonId} not found`);
         return;
       }
 
-      // Stop current activity if exists
+      // Stop current activity first (will save blank time if needed)
       if (state.currentActivity) {
-        await state.stopCurrentActivity();
+        // If current is blank, just stop it without creating a new blank
+        if (state.currentActivity.buttonId === 'blank') {
+          const endTime = new Date();
+          const duration = calculateDuration(state.currentActivity.startTime, endTime);
+          
+          const completedBlank: Activity = {
+            ...state.currentActivity,
+            endTime,
+            duration
+          };
+
+          const splitActivities = splitActivityAtMidnight({
+            ...completedBlank,
+            endTime
+          });
+
+          // Update activities with completed blank
+          set(state => ({
+            activities: [...state.activities, ...splitActivities]
+          }));
+
+          await StorageService.getInstance().saveActivities([...state.activities, ...splitActivities]);
+        } else {
+          // Regular activity - use existing stop logic
+          await get().stopCurrentActivity();
+          // After stopping, we now have a blank activity running - stop it
+          const blankActivity = get().currentActivity;
+          if (blankActivity && blankActivity.buttonId === 'blank') {
+            const endTime = new Date();
+            const duration = calculateDuration(blankActivity.startTime, endTime);
+            
+            const completedBlank: Activity = {
+              ...blankActivity,
+              endTime,
+              duration
+            };
+
+            if (duration > 0) { // Only save if there's actual duration
+              const splitActivities = splitActivityAtMidnight({
+                ...completedBlank,
+                endTime
+              });
+              
+              set(state => ({
+                activities: [...state.activities, ...splitActivities]
+              }));
+              
+              await StorageService.getInstance().saveActivities([...get().activities]);
+            }
+          }
+        }
       }
 
-      // Create new activity
+      // Start new activity
+      const startTime = new Date();
       const newActivity: Activity = {
-        id: generateActivityId(),
-        buttonId,
-        startTime: new Date(),
+        id: generateId(),
+        buttonId: button.id,
+        startTime,
         color: button.color,
-        date: getTodayKey()
+        date: formatDateKey(startTime)
       };
 
       // Update state
       set({
         currentActivity: newActivity,
         timerState: {
-          startTime: newActivity.startTime,
+          startTime,
           currentDuration: 0
         }
       });
@@ -156,16 +209,29 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
         duration
       };
 
-      // Handle cross-midnight activities
-      const activities = completedActivity.endTime
-        ? splitActivityAtMidnight(completedActivity as Activity & { endTime: Date })
-        : [completedActivity];
+      // Split activity at midnight if it crosses date boundaries
+      const splitActivities = splitActivityAtMidnight({
+        ...completedActivity,
+        endTime: endTime // Ensure endTime is not undefined for splitting
+      });
 
-      // Update state
+      // Start blank activity immediately after stopping current one
+      const blankActivity: Activity = {
+        id: generateId(),
+        buttonId: 'blank',
+        startTime: endTime,
+        color: '#E0E0E0',
+        date: formatDateKey(endTime)
+      };
+
+      // Update state with blank activity
       set(state => ({
-        currentActivity: null,
-        timerState: null,
-        activities: [...state.activities, ...activities]
+        currentActivity: blankActivity,
+        timerState: {
+          startTime: endTime,
+          currentDuration: 0
+        },
+        activities: [...state.activities, ...splitActivities]
       }));
 
       // Trigger haptic feedback
@@ -175,8 +241,8 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
 
       // Save to storage
       const storage = StorageService.getInstance();
-      await storage.saveCurrentActivity(null);
-      await storage.saveActivities([...state.activities, ...activities]);
+      await storage.saveCurrentActivity(blankActivity);
+      await storage.saveActivities([...state.activities, ...splitActivities]);
     },
 
     /**
@@ -383,12 +449,51 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
             recoveredActivity = null;
             await storage.saveCurrentActivity(null);
           } else {
-            // Resume the timer
-            timerState = {
-              startTime,
-              currentDuration: calculateDuration(startTime, now)
-            };
-            console.log('Resumed activity timer from crash/restart');
+            // Check if the activity crosses interval boundaries
+            const activityInterval = formatDateKey(startTime);
+            const currentInterval = getTodayKey();
+
+            if (activityInterval !== currentInterval) {
+              // Activity started in a previous interval, split it
+              console.log('Current activity crosses interval boundary, splitting...');
+
+              // Get the start of the current interval
+              const currentIntervalBounds = getDayBounds(now);
+              const intervalStart = currentIntervalBounds.start;
+
+              const previousIntervalActivity = {
+                ...recoveredActivity,
+                endTime: intervalStart,
+                duration: calculateDuration(startTime, intervalStart)
+              };
+
+              // Split the previous portion (in case it spans multiple intervals)
+              const splitActivities = splitActivityAtMidnight(previousIntervalActivity);
+              data.activities = [...data.activities, ...splitActivities];
+              await storage.saveActivities(data.activities);
+
+              // Update current activity to start from current interval
+              recoveredActivity = {
+                ...recoveredActivity,
+                startTime: intervalStart,
+                date: currentInterval
+              };
+              await storage.saveCurrentActivity(recoveredActivity);
+
+              // Update timer state
+              timerState = {
+                startTime: intervalStart,
+                currentDuration: calculateDuration(intervalStart, now)
+              };
+              console.log('Split activity at interval boundary and resumed from current interval');
+            } else {
+              // Activity started today, resume normally
+              timerState = {
+                startTime,
+                currentDuration: calculateDuration(startTime, now)
+              };
+              console.log('Resumed activity timer from crash/restart');
+            }
           }
         }
 
@@ -429,6 +534,26 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
 
           // Save the initial buttons
           await StorageService.getInstance().saveButtons(finalButtons);
+        }
+
+        // If no activity is recovered, start blank activity
+        if (!recoveredActivity) {
+          const now = new Date();
+          const blankActivity: Activity = {
+            id: generateId(),
+            buttonId: 'blank',
+            startTime: now,
+            color: '#E0E0E0',
+            date: formatDateKey(now)
+          };
+          
+          recoveredActivity = blankActivity;
+          timerState = {
+            startTime: now,
+            currentDuration: 0
+          };
+          
+          await storage.saveCurrentActivity(blankActivity);
         }
 
         set({

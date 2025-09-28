@@ -14,12 +14,13 @@ export const TimeDisplay: React.FC = () => {
   const [duration, setDuration] = useState('00:00:00');
 
   useEffect(() => {
-    if (!currentActivity) {
-      setDuration('00:00:00');
-      return;
-    }
-
+    // Always update duration, even for blank activity
     const updateDuration = () => {
+      if (!currentActivity) {
+        setDuration('00:00:00');
+        return;
+      }
+
       const now = new Date();
       const start = new Date(currentActivity.startTime);
       const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
@@ -39,20 +40,28 @@ export const TimeDisplay: React.FC = () => {
     return () => clearInterval(interval);
   }, [currentActivity]);
 
+  // Always show timer, but indicate if it's blank time
   if (!currentActivity) {
     return (
       <View style={styles.container}>
-        <Text style={styles.inactiveText}>No activity tracking</Text>
+        <Text style={styles.inactiveText}>Initializing...</Text>
       </View>
     );
   }
 
   const button = buttons.find(b => b.id === currentActivity.buttonId);
-  const activityName = button?.name || 'Unknown';
+  const activityName = currentActivity.buttonId === 'blank' 
+    ? 'Inactive' 
+    : (button?.name || 'Unknown');
 
   return (
     <View style={styles.container}>
-      <Text style={styles.activityName}>{activityName}</Text>
+      <Text style={[
+        styles.activityName,
+        currentActivity.buttonId === 'blank' && styles.blankActivityName
+      ]}>
+        {activityName}
+      </Text>
       <Text style={styles.duration}>{duration}</Text>
     </View>
   );
@@ -68,6 +77,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
+  },
+  blankActivityName: {
+    color: '#999',
+    fontStyle: 'italic',
   },
   duration: {
     fontSize: 32,

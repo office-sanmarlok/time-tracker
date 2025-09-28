@@ -8,6 +8,7 @@
 * Avoid new dependencies unless necessary; remove when possible.
 
 ## Knowledge & Libraries
+* Use `serena` (MCP server) to scan and search across the codebase.
 * Use `context7` (MCP server) to fetch current docs before coding.
 * If uncertain, pause and request clarification.
 

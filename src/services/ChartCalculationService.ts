@@ -62,7 +62,9 @@ export class ChartCalculationService {
       }
     }
 
-    // Calculate and add unaccounted time
+    // Note: With blank activity tracking, there should be no unaccounted time
+    // as blank activities fill all gaps. But we'll keep this for backward compatibility
+    // and edge cases where data might be missing.
     const totalTracked = calculateTotalTrackedTime(activities);
     const unaccountedTime = calculateUnaccountedTime(totalTracked, isCurrentDay);
 

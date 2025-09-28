@@ -4,17 +4,25 @@
  * @purpose Provide consistent date formatting and manipulation functions
  */
 
-import { format, startOfDay, endOfDay, isToday, differenceInMilliseconds } from 'date-fns';
+import { format, startOfDay, endOfDay, isToday, differenceInMilliseconds, startOfMinute, endOfMinute } from 'date-fns';
+
+// Development mode: 1-minute intervals instead of 24-hour days
+const DEV_MODE = true;
 
 /**
- * Format date for storage (YYYY-MM-DD)
+ * Format date for storage - interval-aware
+ * In dev mode: YYYY-MM-DD HH:mm (minute intervals)
+ * In prod mode: YYYY-MM-DD (day intervals)
  */
 export const formatDateKey = (date: Date): string => {
+  if (DEV_MODE) {
+    return format(date, 'yyyy-MM-dd HH:mm');
+  }
   return format(date, 'yyyy-MM-dd');
 };
 
 /**
- * Get today's date key
+ * Get current interval key
  */
 export const getTodayKey = (): string => {
   return formatDateKey(new Date());
@@ -33,9 +41,17 @@ export const isDateToday = (dateStr: string): boolean => {
 };
 
 /**
- * Get start and end of day for a date
+ * Get start and end of interval for a date
+ * In dev mode: minute boundaries
+ * In prod mode: day boundaries
  */
 export const getDayBounds = (date: Date): { start: Date; end: Date } => {
+  if (DEV_MODE) {
+    return {
+      start: startOfMinute(date),
+      end: endOfMinute(date)
+    };
+  }
   return {
     start: startOfDay(date),
     end: endOfDay(date)
@@ -109,7 +125,7 @@ export const getCurrentTimeAngle = (): number => {
 };
 
 /**
- * Check if an activity crosses midnight
+ * Check if an activity crosses interval boundaries
  */
 export const crossesMidnight = (startTime: Date, endTime?: Date): boolean => {
   if (!endTime) return false;
@@ -117,7 +133,8 @@ export const crossesMidnight = (startTime: Date, endTime?: Date): boolean => {
 };
 
 /**
- * Split activity that crosses midnight into multiple activities
+ * Split activity that crosses interval boundaries into multiple activities
+ * Works with both dev mode (minute intervals) and prod mode (day intervals)
  */
 export const splitActivityAtMidnight = <T extends { startTime: Date; endTime: Date }>(
   activity: T
@@ -130,9 +147,17 @@ export const splitActivityAtMidnight = <T extends { startTime: Date; endTime: Da
     }];
   }
 
+  console.log(`[DEV_MODE=${DEV_MODE}] Splitting activity across intervals:`, {
+    start: activity.startTime.toISOString(),
+    end: activity.endTime.toISOString(),
+    startInterval: formatDateKey(activity.startTime),
+    endInterval: formatDateKey(activity.endTime)
+  });
+
   const activities = [];
   let currentStart = activity.startTime;
-  let currentEnd = endOfDay(currentStart);
+  let currentBounds = getDayBounds(currentStart);
+  let currentEnd = currentBounds.end;
 
   while (currentEnd < activity.endTime) {
     activities.push({
@@ -143,10 +168,10 @@ export const splitActivityAtMidnight = <T extends { startTime: Date; endTime: Da
       date: formatDateKey(currentStart)
     });
 
-    currentStart = startOfDay(new Date(currentEnd.getTime() + 1));
-    currentEnd = currentEnd.getTime() + 86400000 < activity.endTime.getTime()
-      ? endOfDay(currentStart)
-      : activity.endTime;
+    // Move to next interval
+    currentStart = new Date(currentEnd.getTime() + 1);
+    currentBounds = getDayBounds(currentStart);
+    currentEnd = currentBounds.end < activity.endTime ? currentBounds.end : activity.endTime;
   }
 
   // Add the final segment
@@ -157,6 +182,13 @@ export const splitActivityAtMidnight = <T extends { startTime: Date; endTime: Da
     duration: calculateDuration(currentStart, activity.endTime),
     date: formatDateKey(currentStart)
   });
+
+  console.log(`[DEV_MODE=${DEV_MODE}] Split into ${activities.length} segments:`,
+    activities.map(a => ({
+      interval: a.date,
+      duration: Math.floor(a.duration / 1000) + 's'
+    }))
+  );
 
   return activities;
 };
