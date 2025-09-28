@@ -16,9 +16,9 @@ interface TimeSegment {
   color: string;
 }
 
-// Development mode: Set to true for 5-minute cycle, false for 24-hour cycle
+// Development mode: Set to true for 1-minute cycle, false for 24-hour cycle
 const DEV_MODE = true;
-const CYCLE_DURATION = DEV_MODE ? 5 * 60 : 24 * 60 * 60; // 5 minutes or 24 hours in seconds
+const CYCLE_DURATION = DEV_MODE ? 60 : 24 * 60 * 60; // 1 minute or 24 hours in seconds
 
 export const ClockChart: React.FC = () => {
   const activities = useTimeTrackerStore(state => state.activities);
@@ -37,19 +37,18 @@ export const ClockChart: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate the current time angle (0° = midnight/cycle start at top)
+  // Calculate the current time angle (0° = top, clockwise)
   const currentTimeAngle = useMemo(() => {
     const now = currentTime;
 
     if (DEV_MODE) {
-      // In dev mode: 5 minutes = full rotation
-      const cycleStart = new Date(now);
-      const minutes = cycleStart.getMinutes();
-      const seconds = cycleStart.getSeconds();
+      // In dev mode: 1 minute = full rotation
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
 
-      // Calculate position within current 5-minute cycle
-      const secondsIntoCycle = (minutes % 5) * 60 + seconds;
-      return (secondsIntoCycle / 300) * 360; // 300 seconds = 5 minutes
+      // Calculate exact position within the minute
+      const totalSeconds = seconds + milliseconds / 1000;
+      return (totalSeconds / 60) * 360; // 60 seconds = 360 degrees
     } else {
       // Production mode: 24 hours = full rotation
       const midnight = new Date(now);
@@ -68,15 +67,14 @@ export const ClockChart: React.FC = () => {
     let cycleStart: Date;
 
     if (DEV_MODE) {
-      // In dev mode: Only show activities from current 5-minute cycle
+      // In dev mode: Only show activities from current 1-minute cycle
       cycleStart = new Date(currentTime);
-      const minutes = Math.floor(cycleStart.getMinutes() / 5) * 5;
-      cycleStart.setMinutes(minutes, 0, 0);
+      cycleStart.setSeconds(0, 0); // Start of current minute
 
-      // Filter activities within current 5-minute window
+      // Filter activities within current 1-minute window
       relevantActivities = activities.filter(a => {
         const activityTime = new Date(a.startTime);
-        return activityTime >= cycleStart && activityTime < currentTime;
+        return activityTime >= cycleStart && activityTime <= currentTime;
       });
     } else {
       // Production mode: Show today's activities
@@ -185,16 +183,17 @@ export const ClockChart: React.FC = () => {
     return segments;
   }, [activities, currentActivity, currentTime, buttons]);
 
-  // Convert time to angle (0° = midnight/cycle start at top, clockwise)
+  // Convert time to angle (0° = top, clockwise)
   const timeToAngle = (time: Date) => {
     if (DEV_MODE) {
-      // Dev mode: Map time to 5-minute cycles
-      const minutes = time.getMinutes();
+      // Dev mode: Map time to 1-minute cycle
       const seconds = time.getSeconds();
+      const milliseconds = time.getMilliseconds();
 
-      // Calculate position within current 5-minute cycle
-      const secondsIntoCycle = (minutes % 5) * 60 + seconds;
-      return (secondsIntoCycle / 300) * 360 - 90; // -90 to start from top
+      // Calculate exact position within the minute
+      const totalSeconds = seconds + milliseconds / 1000;
+      // Subtract 90 to start from top (12 o'clock position)
+      return (totalSeconds / 60) * 360 - 90;
     } else {
       // Production mode: Map to 24-hour day
       const midnight = new Date(time);
@@ -203,7 +202,8 @@ export const ClockChart: React.FC = () => {
       const secondsSinceMidnight = (time.getTime() - midnight.getTime()) / 1000;
       const secondsInDay = 24 * 60 * 60;
 
-      return (secondsSinceMidnight / secondsInDay) * 360 - 90; // -90 to start from top
+      // Subtract 90 to start from top (12 o'clock position)
+      return (secondsSinceMidnight / secondsInDay) * 360 - 90;
     }
   };
 
@@ -344,7 +344,7 @@ export const ClockChart: React.FC = () => {
         {DEV_MODE && (
           <View style={styles.devIndicator}>
             <Text style={styles.devText}>DEV MODE</Text>
-            <Text style={styles.devSubtext}>5 min cycle</Text>
+            <Text style={styles.devSubtext}>1 min cycle</Text>
           </View>
         )}
       </View>
