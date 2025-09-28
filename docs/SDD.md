@@ -117,11 +117,12 @@ Convert the feature design into a series of prompts for a code-generation LLM th
 - Each item must be a checkbox
 - Simple structure is preferred
 - The model MUST ensure each task item includes:
-- A clear objective as the task description that involves writing, modifying, or testing code
-- Additional information as sub-bullets under the task
-- Specific references to requirements from the requirements document (referencing granular sub-requirements, not just user stories)
+  - A clear objective as the task description that involves writing, modifying, or testing code
+  - Additional information as sub-bullets under the task
+  - Specific references to requirements from the requirements document (referencing granular sub-requirements, not just user stories)
 - The model MUST ensure that the implementation plan is a series of discrete, manageable coding steps
 - The model MUST ensure each task references specific requirements from the requirement document
+- The model MUST include a task to create a markdown file to explain every implemented file, funciton, and their interaction.
 - The model MUST NOT include excessive implementation details that are already covered in the design document
 - The model MUST assume that all context documents (feature requirements, design) will be available during implementation
 - The model MUST ensure each step builds incrementally on previous steps

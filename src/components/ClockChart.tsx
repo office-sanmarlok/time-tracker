@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   chart: {
     position: 'absolute',
-    transform: [{ rotate: '5deg' }], // Maintain Figma's rotation
+    // Removed 5-degree rotation - was causing offset issues
   },
   devIndicator: {
     position: 'absolute',
