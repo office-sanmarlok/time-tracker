@@ -220,7 +220,7 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
         id: generateId(),
         buttonId: 'blank',
         startTime: endTime,
-        color: '#E0E0E0',
+        color: '#EBEBEB',
         date: formatDateKey(endTime)
       };
 
@@ -543,7 +543,7 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
             id: generateId(),
             buttonId: 'blank',
             startTime: now,
-            color: '#E0E0E0',
+            color: '#EBEBEB',
             date: formatDateKey(now)
           };
           

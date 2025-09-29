@@ -32,7 +32,7 @@ export const ClockChart: React.FC = () => {
     // Update every 100ms for smooth continuous motion
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 100);
+    }, 1000); // Update every second for smoother animation
 
     return () => clearInterval(timer);
   }, []);
@@ -111,14 +111,14 @@ export const ClockChart: React.FC = () => {
           startTime: lastEndTime,
           endTime: activityStart,
           buttonId: 'inactive',
-          color: '#E5E5E5'
+          color: '#EBEBEB'
         });
       }
 
       // Add activity segment
       const button = buttons.find(b => b.id === activity.buttonId);
       const color = activity.buttonId === 'blank' 
-        ? '#E5E5E5'  // Gray for blank/inactive time
+        ? '#EBEBEB'  // Light gray for blank/inactive time
         : (figmaColors[activity.buttonId] || button?.color || '#888');
       
       segments.push({
@@ -157,14 +157,14 @@ export const ClockChart: React.FC = () => {
             startTime: lastEndTime,
             endTime: effectiveStart,
             buttonId: 'blank',
-            color: '#E5E5E5'
+            color: '#EBEBEB'
           });
         }
 
         // Add current activity up to current time (continuously updating)
         const button = buttons.find(b => b.id === currentActivity.buttonId);
         const color = currentActivity.buttonId === 'blank'
-          ? '#E5E5E5'  // Gray for blank/inactive time
+          ? '#EBEBEB'  // Light gray for blank/inactive time
           : (figmaColors[currentActivity.buttonId] || button?.color || '#888');
         
         segments.push({
@@ -185,7 +185,7 @@ export const ClockChart: React.FC = () => {
         startTime: lastEndTime,
         endTime: currentTime,
         buttonId: 'blank',
-        color: '#E5E5E5'
+        color: '#EBEBEB'
       });
     }
 
@@ -216,54 +216,75 @@ export const ClockChart: React.FC = () => {
     }
   };
 
-  // Create path for a segment
-  const createSegmentPath = (segment: TimeSegment, radius: number, innerRadius: number, centerX: number, centerY: number) => {
-    const startAngle = timeToAngle(segment.startTime);
-    const endAngle = timeToAngle(segment.endTime);
+  // Create simple arc path for segment
+  const createSegmentPath = (segment: TimeSegment, radius: number, innerRadius: number, centerX: number, centerY: number, nextSegment?: TimeSegment) => {
+    const MIN_GAP_ANGLE = 50; // Minimum degrees between segments to prevent overlap
+    
+    let startAngle = timeToAngle(segment.startTime);
+    let endAngle = timeToAngle(segment.endTime);
 
     // Ensure angles are valid
     if (isNaN(startAngle) || isNaN(endAngle)) {
-      return ''; // Return empty path if angles are invalid
+      return null;
     }
 
     // Calculate angle difference properly
     let angleDiff = endAngle - startAngle;
-
-    // Handle wrap-around
     if (angleDiff < 0) {
       angleDiff += 360;
     }
 
     // Prevent full circle or negative segments
     if (angleDiff <= 0 || angleDiff >= 360) {
-      return ''; // Return empty path for invalid segments
+      return null;
+    }
+
+    // Check if next segment exists and is close
+    if (nextSegment) {
+      const nextStartAngle = timeToAngle(nextSegment.startTime);
+      if (!isNaN(nextStartAngle)) {
+        let gapToNext = nextStartAngle - endAngle;
+        if (gapToNext < 0) gapToNext += 360;
+        
+        // If segments are too close, trim the current segment
+        if (gapToNext < MIN_GAP_ANGLE) {
+          endAngle = nextStartAngle - MIN_GAP_ANGLE / 2;
+          if (endAngle < startAngle) endAngle += 360;
+        }
+      }
+    }
+
+    // Apply standard gap for visual separation
+    const GAP_ANGLE = 50; // Increased gap to prevent overlap
+    if (angleDiff > GAP_ANGLE * 2) {
+      startAngle += GAP_ANGLE / 2;
+      endAngle -= GAP_ANGLE / 2;
+      angleDiff = endAngle - startAngle;
+      if (angleDiff < 0) angleDiff += 360;
     }
 
     const startAngleRad = (startAngle * Math.PI) / 180;
     const endAngleRad = (endAngle * Math.PI) / 180;
-
-    // Outer arc points
-    const x1 = centerX + radius * Math.cos(startAngleRad);
-    const y1 = centerY + radius * Math.sin(startAngleRad);
-    const x2 = centerX + radius * Math.cos(endAngleRad);
-    const y2 = centerY + radius * Math.sin(endAngleRad);
-
-    // Inner arc points
-    const x3 = centerX + innerRadius * Math.cos(startAngleRad);
-    const y3 = centerY + innerRadius * Math.sin(startAngleRad);
-    const x4 = centerX + innerRadius * Math.cos(endAngleRad);
-    const y4 = centerY + innerRadius * Math.sin(endAngleRad);
-
+    
+    // Calculate middle radius and stroke width
+    const middleRadius = (radius + innerRadius) / 2;
+    const strokeWidth = radius - innerRadius - 4; // Slightly thinner for cleaner look
+    
+    // Calculate arc points at middle radius
+    const x1 = centerX + middleRadius * Math.cos(startAngleRad);
+    const y1 = centerY + middleRadius * Math.sin(startAngleRad);
+    const x2 = centerX + middleRadius * Math.cos(endAngleRad);
+    const y2 = centerY + middleRadius * Math.sin(endAngleRad);
+    
     const largeArc = angleDiff > 180 ? 1 : 0;
 
-    return `
-      M ${x3} ${y3}
-      L ${x1} ${y1}
-      A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}
-      L ${x4} ${y4}
-      A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x3} ${y3}
-      Z
-    `.trim();
+    // Return simple arc path
+    return {
+      d: `M ${x1} ${y1} A ${middleRadius} ${middleRadius} 0 ${largeArc} 1 ${x2} ${y2}`,
+      strokeWidth: strokeWidth,
+      color: segment.color,
+      isStudying: segment.buttonId === 'studying'
+    };
   };
 
   const chartSize = 261;
@@ -282,7 +303,7 @@ export const ClockChart: React.FC = () => {
       <View style={styles.chartWrapper}>
         {/* Shadow background */}
         <Svg width={288} height={288} viewBox="0 0 288 288" style={styles.shadow}>
-          <Circle cx={144} cy={144} r={144} fill="#F0F0F0" />
+          <Circle cx={144} cy={144} r={144} fill="#F5F5F5" />
         </Svg>
 
         {/* Main clock chart */}
@@ -314,21 +335,35 @@ export const ClockChart: React.FC = () => {
                 A ${innerRadius} ${innerRadius} 0 1 0 ${centerX - innerRadius} ${centerY}
                 Z
               `.trim()}
-              fill="#E5E5E5"
+              fill="#EBEBEB"
               fillRule="evenodd"
             />
 
             {/* Activity segments painted on top */}
-            {segments.map((segment, index) => {
-              const isStudying = segment.buttonId === 'studying';
-              return (
-                <Path
-                  key={`segment-${index}`}
-                  d={createSegmentPath(segment, outerRadius, innerRadius, centerX, centerY)}
-                  fill={isStudying ? 'url(#studyingGradient)' : segment.color}
-                />
+            {(() => {
+              // Filter out blank segments first
+              const visibleSegments = segments.filter(segment => 
+                segment.buttonId !== 'blank' && segment.buttonId !== 'inactive'
               );
-            })}
+              
+              return visibleSegments.map((segment, index) => {
+                const nextSegment = visibleSegments[index + 1]; // Pass next segment for overlap check
+                const pathData = createSegmentPath(segment, outerRadius, innerRadius, centerX, centerY, nextSegment);
+                
+                if (!pathData) return null;
+                
+                return (
+                  <Path
+                    key={`segment-${index}`}
+                    d={pathData.d}
+                    stroke={pathData.isStudying ? 'url(#studyingGradient)' : pathData.color}
+                    strokeWidth={pathData.strokeWidth}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                );
+              });
+            })()}
 
             {/* White center circle */}
             <Circle cx={centerX} cy={centerY} r={innerRadius} fill="white" />
@@ -385,7 +420,6 @@ const styles = StyleSheet.create({
   },
   chart: {
     position: 'absolute',
-    // Removed 5-degree rotation - was causing offset issues
   },
   devIndicator: {
     position: 'absolute',
